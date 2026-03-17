@@ -22,7 +22,6 @@ import net.mamoe.mirai.data.MemberInfo
 import net.mamoe.mirai.data.StrangerInfo
 import net.mamoe.mirai.data.UserProfile
 import net.mamoe.mirai.event.Event
-import net.mamoe.mirai.event.broadcast
 import net.mamoe.mirai.event.events.*
 import net.mamoe.mirai.internal.event.EventChannelToEventDispatcherAdapter
 import net.mamoe.mirai.internal.event.InternalEventMechanism
@@ -111,6 +110,7 @@ class Overflow : IMirai, CoroutineScope, LowLevelApiAccessor, OverflowAPI {
         var config: Config? = null
         if (configFile.exists()) try {
             config = json.decodeFromString(Config.serializer(), configFile.readText().replace("\r", ""))
+            config.connections
         } catch (t: Throwable) {
             val bak = File(configFile.parentFile, "${configFile.name}.old_${System.currentTimeMillis()}.bak")
             configFile.copyTo(bak, true)
@@ -209,24 +209,12 @@ class Overflow : IMirai, CoroutineScope, LowLevelApiAccessor, OverflowAPI {
         logger: Logger = LoggerFactory.getLogger("Onebot"),
         job: Job? = null
     ): Boolean {
-        return start0(
-            BotConfig(
-                url = config.wsHost,
-                reversedPort = config.reversedWSPort,
-                token = config.token,
-                isAccessToken = config.token.isNotBlank(),
-                noPlatform = config.noPlatform,
-                useCQCode = config.useCQCode,
-                retryTimes = config.retryTimes,
-                retryWaitMills = config.retryWaitMills,
-                retryRestMills = config.retryRestMills,
-                heartbeatCheckSeconds = config.heartbeatCheckSeconds,
-                useGroupUploadEventForFileMessage = config.useGroupUploadEventForFileMessage,
-                parentJob = job ?: defaultJob,
-            ),
-            printInfo = printInfo,
-            logger = logger
-        ) != null
+        for (botConfig in config.connections) {
+            if (botConfig.enabled) {
+                botConfig.connect(printInfo, logger, job ?: defaultJob)
+            }
+        }
+        return true
     }
 
     // 反向 WebSocket 已存在的服务器列表
