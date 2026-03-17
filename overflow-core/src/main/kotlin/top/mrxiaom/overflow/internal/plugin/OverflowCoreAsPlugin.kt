@@ -40,6 +40,7 @@ import top.mrxiaom.overflow.internal.Overflow
 import top.mrxiaom.overflow.internal.message.OnebotMessages.string
 import top.mrxiaom.overflow.internal.plugin.OverflowCoreAsPlugin.TheDescription.id
 import top.mrxiaom.overflow.internal.utils.LoggerInFolder
+import top.mrxiaom.overflow.internal.utils.SLF4JAdapterLogger
 import java.io.File
 import kotlin.reflect.jvm.jvmName
 import kotlin.system.exitProcess
@@ -106,7 +107,7 @@ internal object OverflowCoreAsPlugin : Plugin, CommandOwner {
         } else {
             miraiLogger = LoggerInFolder(Overflow::class, "Onebot", File("logs/onebot"), 1.weeksToMillis)
         }
-        oneBotLogger = net.mamoe.mirai.console.internal.logging.externalbind.slf4j.SLF4JAdapterLogger(miraiLogger)
+        oneBotLogger = SLF4JAdapterLogger(miraiLogger)
 
         config.resourceCache.apply {
             overflow.configureMessageCache(
