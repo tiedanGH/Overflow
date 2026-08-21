@@ -2,6 +2,7 @@ package top.mrxiaom.overflow.internal.message.serializer
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
@@ -34,28 +35,29 @@ class InlineKeyboardSerializer : AbstractMessageSerializer() {
     ): Boolean {
         val data = element.data() ?: return false
         // OpenShamrock
-        val botAppId = data["bot_appid"].long
-        val rowsRaw = data["rows"].run {
-            this as? JsonArray ?: Json.parseToJsonElement(string).jsonArray
-        }
-        val rows = rowsRaw.jsonArray.map { e1 ->
+        val botAppId = data["bot_appid"]?.long ?: 0L
+        val rowsRaw = data["rows"]?.run {
+            this as? JsonArray ?: runCatching { Json.parseToJsonElement(string).jsonArray }.getOrNull()
+        } ?: return false
+        val rows = rowsRaw.map { e1 ->
             val obj1 = e1.jsonObject
             InlineKeyboardRow(
-                buttons = obj1["buttons"]!!.jsonArray.map { e2 ->
+                buttons = obj1["buttons"].asArrayOrEmpty().map { e2 ->
                     val button = e2.jsonObject
                     InlineKeyboardButton(
                         id = button["id"].string,
                         label = button["label"].string,
                         visitedLabel = button["visited_label"].string,
-                        style = button["style"].int,
-                        type = button["type"].int,
-                        clickLimit = button["click_limit"].int,
+                        style = button["style"]?.int ?: 0,
+                        type = button["type"]?.int ?: 0,
+                        clickLimit = button["click_limit"]?.int ?: 0,
                         unsupportTips = button["unsupport_tips"].string,
                         data = button["data"].string,
-                        atBotShowChannelList = button["at_bot_show_channel_list"].boolean,
-                        permissionType = button["permission_type"].int,
-                        specifyRoleIds = button["specify_role_ids"]!!.jsonArray.map { it.string },
-                        specifyTinyIds = button["specify_tinyids"]!!.jsonArray.map { it.string }
+                        atBotShowChannelList = button["at_bot_show_channel_list"]?.boolean == true,
+                        permissionType = button["permission_type"]?.int ?: 0,
+                        specifyRoleIds = button["specify_role_ids"].asArrayOrEmpty().map { it.string },
+                        specifyTinyIds = (button["specify_tinyids"] ?: button["specify_user_ids"])
+                            .asArrayOrEmpty().map { it.string }
                     )
                 }
             )
@@ -93,6 +95,9 @@ class InlineKeyboardSerializer : AbstractMessageSerializer() {
                                     putJsonArray("specify_tinyids") {
                                         button.specifyTinyIds.forEach { add(it) }
                                     }
+                                    putJsonArray("specify_user_ids") {
+                                        button.specifyTinyIds.forEach { add(it) }
+                                    }
                                 })
                             }
                         }
@@ -101,5 +106,9 @@ class InlineKeyboardSerializer : AbstractMessageSerializer() {
             }
         }
         return true
+    }
+
+    private fun JsonElement?.asArrayOrEmpty(): JsonArray {
+        return this as? JsonArray ?: JsonArray(emptyList())
     }
 }
